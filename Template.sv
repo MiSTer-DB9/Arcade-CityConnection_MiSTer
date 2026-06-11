@@ -322,9 +322,17 @@ wire [10:0] ps2_key;
 wire [15:0] joy0_USB, joy1_USB;
 // [MiSTer-DB9 END]
 
-// [MiSTer-DB9-Pro BEGIN] - DB controllers muted while OSD is open
-wire [31:0] joy0 = joydb_1ena ? (OSD_STATUS ? 32'b0 : {joydb_1[11],joydb_1[9],joydb_1[10],joydb_1[5:0]}) : joy0_USB;
-wire [31:0] joy1 = joydb_2ena ? (OSD_STATUS ? 32'b0 : {joydb_2[11],joydb_2[10],joydb_2[9],joydb_2[5:0]}) : joydb_1ena ? joy0_USB : joy1_USB;
+// [MiSTer-DB9-Pro BEGIN] - DB controllers muted while OSD is open; joydb_1/2 remuxed into joy0/joy1
+// Layer B: joydb_*_mapped = MiSTer-standard joystick word, slots filled by the
+// programmable remap matrix. Its factory default derives from the loaded game's
+// MRA <buttons> (per game), the same source USB uses, so DB9 tracks USB.
+// Consumer reads [3:0]=R/L/D/U [4]=Fire [5]=Jump [10]=Start [11]=Coin [12]=Pause.
+// The old hand-wire drove joy[8:0] (Start/Coin into dead bits 6/7/8) and left
+// joy[10]/[11]/[12]=0, so DB9 Start/Coin/Pause never worked; the per-player perm
+// asymmetry was an artifact of that. Consuming joydb_*_mapped[12:0] lands those at
+// the bits the core reads, symmetric by construction, and fixes the dead inputs.
+wire [31:0] joy0 = joydb_1ena ? (OSD_STATUS ? 32'b0 : joydb_1_mapped[12:0]) : joy0_USB;
+wire [31:0] joy1 = joydb_2ena ? (OSD_STATUS ? 32'b0 : joydb_2_mapped[12:0]) : joydb_1ena ? joy0_USB : joy1_USB;
 // [MiSTer-DB9-Pro END]
 wire        ioctl_download;
 wire [15:0] ioctl_index;
